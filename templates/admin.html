@@ -62,6 +62,10 @@
                             <td>{{ user.total_records }}</td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-secondary"
+                                        style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--bg-color); border: 1px solid var(--border-color);">Edit
+                                        Name</a>
+
                                     <a href="{{ url_for('history', user_id=user.id) }}" class="btn-primary"
                                         style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">History</a>
 

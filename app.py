@@ -418,6 +418,26 @@ def admin():
         
     return render_template('admin.html', users=user_list)
 
+@app.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def edit_user(user_id):
+    if not current_user.is_admin: abort(403)
+    user = User.query.get_or_404(user_id)
+    
+    if request.method == 'POST':
+        new_username = request.form['username']
+        # Check if username exists and is not the current user
+        existing = User.query.filter_by(username=new_username).first()
+        if existing and existing.id != user.id:
+            flash('Username already exists.', 'error')
+        else:
+            user.username = new_username
+            db.session.commit()
+            flash(f'Username updated to {new_username}.', 'success')
+            return redirect(url_for('admin'))
+            
+    return render_template('edit_user.html', user=user)
+
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
