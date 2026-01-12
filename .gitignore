@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+.env
+idle_tracker.db
+static/uploads/*
+!static/uploads/.gitkeep
