@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Idle Time Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container" style="max-width: 1000px;">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1>Admin Panel 🛡️</h1>
+                <p class="subtitle">Overview of all users and activity.</p>
+            </div>
+            <div>
+                <a href="{{ url_for('index') }}" class="btn-secondary">Back to Dashboard</a>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2 style="margin-bottom: 1.5rem;">User Management</h2>
+            <div class="table-wrapper">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Total Idle Time</th>
+                            <th>Total Records</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user[0] }}</td>
+                            <td>{{ user[1] }}</td>
+                            <td>
+                                {% if user[2] %}
+                                <span class="badge" style="background: var(--accent-color); color: white;">Admin</span>
+                                {% else %}
+                                <span class="badge"
+                                    style="background: var(--border-color); color: var(--text-primary);">User</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user[3] | format_minutes }}</td>
+                            <td>{{ user[4] }}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <a href="{{ url_for('history', user_id=user[0]) }}" class="btn-primary"
+                                        style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">History</a>
+
+                                    <a href="{{ url_for('reset_password', user_id=user[0]) }}" class="btn-secondary"
+                                        style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--card-bg); border: 1px solid var(--border-color);">Reset
+                                        PW</a>
+
+                                    {% if user[0] != current_user.id %}
+                                    <form action="{{ url_for('delete_user', user_id=user[0]) }}" method="post"
+                                        style="display:inline; margin: 0;">
+                                        <button type="submit"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--error-color, #ef4444); color: white; border: none; border-radius: 6px; cursor: pointer;"
+                                            onclick="return confirm('Are you sure you want to PERMANENTLY delete user {{ user[1] }}? This cannot be undone.')">Delete</button>
+                                    </form>
+                                    {% else %}
+                                    <button disabled
+                                        style="padding: 0.4rem 0.8rem; font-size: 0.85rem; opacity: 0.5; cursor: not-allowed; background: var(--bg-color); color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 6px;">Delete</button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

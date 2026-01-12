@@ -1,0 +1,68 @@
+{% if records %}
+<div class="table-wrapper">
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Screenshot</th>
+                <th>Date</th>
+                <th>Idle Time</th>
+                <th>Reason</th>
+                <th>Detected Text</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in records %}
+            <tr>
+                <td>
+                    {% if row[2] == 'manual_entry' %}
+                    <span class="badge" style="background: #e9ecef; color: #495057;">📝 Manual</span>
+                    {% else %}
+                    <a href="{{ url_for('static', filename='uploads/' + row[2]) }}" target="_blank">
+                        <img src="{{ url_for('static', filename='uploads/' + row[2]) }}" alt="Screenshot"
+                            class="thumbnail">
+                    </a>
+                    {% endif %}
+                </td>
+                <td>{{ row[1] }}</td>
+                <td><span class="badge">{{ row[3] | format_minutes }}</span></td>
+                <td>{{ row[5] if row[5] else '-' }}</td>
+                <td class="text-muted">{{ row[4] }}</td>
+                <td>
+                    <form action="{{ url_for('delete_record', record_id=row[0]) }}" method="post"
+                        style="display:inline;">
+                        <button type="submit" class="btn-delete"
+                            onclick="return confirm('Are you sure?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination Controls (Footer) -->
+{% if total_pages > 1 %}
+<div class="pagination"
+    style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; align-items: center;">
+    {% if page > 1 %}
+    <a href="{{ url_for(endpoint, page=page-1, per_page=per_page, month=current_month, user_id=target_user_id|default(None)) }}"
+        class="btn-secondary ajax-link" data-page="{{ page-1 }}">← Previous</a>
+    {% else %}
+    <span class="btn-secondary" style="opacity: 0.5; cursor: not-allowed;">← Previous</span>
+    {% endif %}
+
+    <span style="color: var(--text-secondary);">Page {{ page }} of {{ total_pages }}</span>
+
+    {% if page < total_pages %} <a
+        href="{{ url_for(endpoint, page=page+1, per_page=per_page, month=current_month, user_id=target_user_id|default(None)) }}"
+        class="btn-secondary ajax-link" data-page="{{ page+1 }}">Next →</a>
+        {% else %}
+        <span class="btn-secondary" style="opacity: 0.5; cursor: not-allowed;">Next →</span>
+        {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<p class="empty-state">No records found.</p>
+{% endif %}

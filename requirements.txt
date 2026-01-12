@@ -1,0 +1,6 @@
+flask
+flask-login
+pytesseract
+pillow
+openpyxl
+werkzeug
