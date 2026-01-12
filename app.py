@@ -155,9 +155,11 @@ def login():
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
-        user = User.query.filter_by(username=username).first()
+        
+        # Case-insensitive login
+        user = User.query.filter(func.lower(User.username) == func.lower(username)).first()
         
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
@@ -173,7 +175,7 @@ def register():
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
         confirm_password = request.form['confirm_password']
         
@@ -425,9 +427,9 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     
     if request.method == 'POST':
-        new_username = request.form['username']
+        new_username = request.form['username'].strip()
         # Check if username exists and is not the current user
-        existing = User.query.filter_by(username=new_username).first()
+        existing = User.query.filter(func.lower(User.username) == func.lower(new_username)).first()
         if existing and existing.id != user.id:
             flash('Username already exists.', 'error')
         else:
