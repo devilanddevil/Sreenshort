@@ -4,7 +4,7 @@ import datetime
 import io
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, abort, send_file
 import pytesseract
-from PIL import Image, ImageOps # Added ImageOps import
+from PIL import Image, ImageOps 
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,7 +16,6 @@ app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_flash_messages'
 
 # --- DATABASE CONFIGURATION ---
-# Use the DATABASE_URL environment variable (from Render), or fallback to local sqlite
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///idle_tracker.db')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -72,7 +71,6 @@ if tesseract_cmd:
 else:
     print("Tesseract not found in common paths. Relying on system PATH.")
 
-# Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # --- HELPER FUNCTIONS ---
@@ -82,13 +80,11 @@ def parse_idle_time(text):
         r'idle for:?\s*.*?((\d+\s*h\s*)?(\d+\s*m))',
         r'Not Working\s*[-–—]?\s*.*?((\d+\s*h\s*)?(\d+\s*m))'
     ]
-    
     time_str = None
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
         if match:
             time_str = match.group(1).lower()
-            print(f"DEBUG MATCHED: {time_str}")
             break
             
     if time_str:
@@ -107,24 +103,20 @@ def get_stats(page=1, per_page=5, user_id=None):
     if not user_id:
         return {'today': 0, 'month': 0, 'recent': {'records': [], 'page': 1, 'per_page': 5, 'total_pages': 0, 'total_count': 0}}
     
-    # Calculate Today and Month ranges
     now = datetime.datetime.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # Today's Total
     today_minutes = db.session.query(func.sum(Record.idle_minutes)).filter(
         Record.user_id == user_id, 
         Record.timestamp >= today_start
     ).scalar() or 0
     
-    # Month's Total
     month_minutes = db.session.query(func.sum(Record.idle_minutes)).filter(
         Record.user_id == user_id, 
         Record.timestamp >= month_start
     ).scalar() or 0
     
-    # Recent (Paginated)
     pagination = Record.query.filter_by(user_id=user_id).order_by(Record.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     return {
@@ -155,10 +147,10 @@ def login():
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username'].strip()
+        username = request.form['username'].strip() # Strip whitespace
         password = request.form['password']
         
-        # Case-insensitive login
+        # Case insensitive login
         user = User.query.filter(func.lower(User.username) == func.lower(username)).first()
         
         if user and check_password_hash(user.password_hash, password):
@@ -175,7 +167,7 @@ def register():
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username'].strip()
+        username = request.form['username'].strip() # Strip whitespace
         password = request.form['password']
         confirm_password = request.form['confirm_password']
         
@@ -183,11 +175,10 @@ def register():
             flash('Passwords do not match', 'error')
             return redirect(url_for('register'))
             
-        if User.query.filter_by(username=username).first():
+        if User.query.filter(func.lower(User.username) == func.lower(username)).first():
             flash('Username already exists', 'error')
             return redirect(url_for('register'))
             
-        # First user is admin
         user_count = User.query.count()
         is_admin = (user_count == 0)
         
@@ -198,8 +189,6 @@ def register():
         
         login_user(new_user)
         flash('Account created successfully!', 'success')
-        if is_admin:
-            flash('You are the first user and have been granted ADMIN privileges.', 'info')
         return redirect(url_for('index'))
     return render_template('register.html')
 
@@ -221,7 +210,6 @@ def upload_file():
     manual_minutes = request.form.get('manual_minutes')
     reason = request.form.get('reason', '')
     
-    # CASE 1: Manual Entry
     if manual_minutes:
         try:
             minutes = int(manual_minutes)
@@ -243,7 +231,6 @@ def upload_file():
             flash('Invalid minutes value.', 'error')
         return redirect(url_for('index'))
 
-    # CASE 2: File Upload
     if 'screenshot' not in request.files:
         flash('No file part and no manual minutes provided.')
         return redirect(request.url)
@@ -259,47 +246,39 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
         try:
-            # Read into memory
             image_bytes = file.read()
             if len(image_bytes) == 0:
-                flash('Uploaded file is empty (0 bytes).', 'error')
+                flash('Uploaded file is empty.', 'error')
                 return redirect(request.url)
                 
             image_stream = io.BytesIO(image_bytes)
             base_img = Image.open(image_stream)
             
-            # Save ephemeral copy
+            # Ephemeral save for display
             if not os.path.exists(app.config['UPLOAD_FOLDER']):
                 os.makedirs(app.config['UPLOAD_FOLDER'])
             with open(filepath, 'wb') as f:
                 f.write(image_bytes)
             
-            # OCR Strategies
-            # Strategy 1: Grayscale + PSM 3
             img_gray = base_img.convert('L')
             text = pytesseract.image_to_string(img_gray)
             minutes, detected_text = parse_idle_time(text)
             
-            # Strategy 2: PSM 6
             if minutes == 0:
                 text = pytesseract.image_to_string(img_gray, config='--psm 6')
                 minutes, detected_text = parse_idle_time(text)
 
-            # Strategy 3: Thresholding
             if minutes == 0:
                 try:
-                    threshold = 150
-                    img_thresh = img_gray.point(lambda p: p > threshold and 255)
+                    img_thresh = img_gray.point(lambda p: p > 150 and 255)
                     text = pytesseract.image_to_string(img_thresh, config='--psm 6')
                     minutes, detected_text = parse_idle_time(text)
                 except: pass
 
-             # Strategy 4: Invert
             if minutes == 0:
                  try:
-                     img_invert = ImageOps.invert(base_img.convert('RGB'))
-                     img_invert_gray = img_invert.convert('L')
-                     text = pytesseract.image_to_string(img_invert_gray, config='--psm 6')
+                     img_invert = ImageOps.invert(base_img.convert('RGB')).convert('L')
+                     text = pytesseract.image_to_string(img_invert, config='--psm 6')
                      minutes, detected_text = parse_idle_time(text)
                  except: pass
 
@@ -344,11 +323,9 @@ def history():
         u = User.query.get(target_user_id)
         if u: target_username = u.username
     
-    # Base Query
+    # 1. Base Filter for Records (Pagination)
     query = Record.query.filter_by(user_id=target_user_id)
     
-    # Available Months
-    # (SQLAlchemy efficient distinct query)
     dates = db.session.query(Record.timestamp).filter_by(user_id=target_user_id).all()
     available_months = sorted(list(set([d[0].strftime('%Y-%m') for d in dates])), reverse=True)
     
@@ -361,12 +338,23 @@ def history():
              query = query.filter(Record.timestamp >= start_date, Record.timestamp < end_date)
         except: pass
 
-    # Pagination
     pagination = query.order_by(Record.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
     records = pagination.items
     
-    # Total Minutes
-    total_minutes = db.session.query(func.sum(Record.idle_minutes)).select_from(query.subquery()).scalar() or 0
+    # 2. SEPARATE Sum Query for Total Minutes (Fixes Aggregation Issue)
+    sum_query = db.session.query(func.sum(Record.idle_minutes)).filter(Record.user_id == target_user_id)
+    
+    # Apply same date filter to sum query
+    if month_filter:
+        try:
+             y, m = map(int, month_filter.split('-'))
+             start_date = datetime.datetime(y, m, 1)
+             if m == 12: end_date = datetime.datetime(y + 1, 1, 1)
+             else: end_date = datetime.datetime(y, m + 1, 1)
+             sum_query = sum_query.filter(Record.timestamp >= start_date, Record.timestamp < end_date)
+        except: pass
+
+    total_minutes = sum_query.scalar() or 0
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('ajax') == '1':
         return render_template('partials/table_content.html', 
@@ -395,21 +383,14 @@ def history():
 def admin():
     if not current_user.is_admin: abort(403)
     
-    # Join User and Record to get aggregated stats
     users = db.session.query(
         User,
         func.sum(Record.idle_minutes).label('total_minutes'),
         func.count(Record.id).label('total_records')
     ).outerjoin(Record).group_by(User.id).all()
     
-    # Transform for template (to match previous dict structure or just pass objects)
-    # The previous helper let template access user.id, user.username
-    # Here users is a list of tuples: (UserObj, total_minutes, total_records)
-    
-    # Let's clean this up for the template
     user_list = []
     for u, tm, tr in users:
-        # Create a simplified object or dict that mimics the structure expected
         user_list.append({
             'id': u.id,
             'username': u.username,
@@ -428,7 +409,6 @@ def edit_user(user_id):
     
     if request.method == 'POST':
         new_username = request.form['username'].strip()
-        # Check if username exists and is not the current user
         existing = User.query.filter(func.lower(User.username) == func.lower(new_username)).first()
         if existing and existing.id != user.id:
             flash('Username already exists.', 'error')
@@ -450,7 +430,7 @@ def delete_user(user_id):
     
     user = User.query.get(user_id)
     if user:
-        db.session.delete(user) # Cascade deletes records automatically
+        db.session.delete(user)
         db.session.commit()
         flash('User deleted.', 'success')
     return redirect(url_for('admin'))
@@ -513,7 +493,6 @@ def delete_record(record_id):
     flash('Record deleted.', 'info')
     return redirect(url_for('index'))
 
-# Create Tables on Startup
 with app.app_context():
     db.create_all()
 
