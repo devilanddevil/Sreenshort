@@ -5,3 +5,5 @@ pillow
 openpyxl
 werkzeug
 gunicorn
+flask-sqlalchemy
+psycopg2-binary
