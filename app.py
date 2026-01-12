@@ -141,6 +141,22 @@ app.jinja_env.filters['format_minutes'] = format_minutes
 
 # --- ROUTES ---
 
+@app.route('/emergency_reset')
+def emergency_reset():
+    # Force reset ID 1 to admin/12345
+    try:
+        user = User.query.get(1)
+        if user:
+            user.username = 'admin'
+            user.password_hash = generate_password_hash('12345')
+            user.is_admin = True
+            db.session.commit()
+            return "SUCCESS: User ID 1 reset to username='admin', password='12345'. <a href='/login'>Go to Login</a>"
+        else:
+            return "ERROR: User ID 1 not found. Please Register a new user first."
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
