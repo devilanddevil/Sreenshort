@@ -10,6 +10,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+import uuid
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -258,7 +259,12 @@ def upload_file():
         return redirect(request.url)
     
     if file:
-        filename = secure_filename(file.filename)
+        original_filename = secure_filename(file.filename)
+        # Generate unique filename to prevent overwriting
+        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"{timestamp}_{unique_id}_{original_filename}"
+        
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
         try:
