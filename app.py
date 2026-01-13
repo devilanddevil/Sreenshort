@@ -347,6 +347,7 @@ def history():
     month_filter = request.args.get('month')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 5, type=int)
+    day_limit = request.args.get('day_limit', type=int)
     
     if per_page > 100: per_page = 100
     if per_page < 1: per_page = 5
@@ -369,8 +370,28 @@ def history():
         try:
              y, m = map(int, month_filter.split('-'))
              start_date = datetime.datetime(y, m, 1)
-             if m == 12: end_date = datetime.datetime(y + 1, 1, 1)
-             else: end_date = datetime.datetime(y, m + 1, 1)
+             
+             # Month End Date (Default)
+             if m == 12: month_end_date = datetime.datetime(y + 1, 1, 1)
+             else: month_end_date = datetime.datetime(y, m + 1, 1)
+             
+             end_date = month_end_date
+
+             # Apply Day Limit if provided
+             day_limit = request.args.get('day_limit', type=int)
+             if day_limit:
+                 try:
+                     # Calculate specific limit date (inclusive)
+                     # We create a date for the specific day, then add 1 day to get the < bound
+                     limit_date = datetime.datetime(y, m, day_limit) + datetime.timedelta(days=1)
+                     
+                     # Ensure we don't go beyond the month's actual end
+                     if limit_date < month_end_date:
+                         end_date = limit_date
+                 except ValueError:
+                     # Invalid day for this month (e.g. Feb 30), ignore day limit
+                     pass
+
              query = query.filter(Record.timestamp >= start_date, Record.timestamp < end_date)
         except: pass
 
@@ -385,8 +406,24 @@ def history():
         try:
              y, m = map(int, month_filter.split('-'))
              start_date = datetime.datetime(y, m, 1)
-             if m == 12: end_date = datetime.datetime(y + 1, 1, 1)
-             else: end_date = datetime.datetime(y, m + 1, 1)
+             
+             # Month End Date (Default)
+             if m == 12: month_end_date = datetime.datetime(y + 1, 1, 1)
+             else: month_end_date = datetime.datetime(y, m + 1, 1)
+             
+             end_date = month_end_date
+
+             # Apply Day Limit if provided
+             day_limit = request.args.get('day_limit', type=int)
+             if day_limit:
+                 try:
+                     # Calculate specific limit date (inclusive)
+                     limit_date = datetime.datetime(y, m, day_limit) + datetime.timedelta(days=1)
+                     if limit_date < month_end_date:
+                         end_date = limit_date
+                 except ValueError:
+                     pass
+
              sum_query = sum_query.filter(Record.timestamp >= start_date, Record.timestamp < end_date)
         except: pass
 
@@ -400,6 +437,7 @@ def history():
                                total_pages=pagination.pages,
                                endpoint='history',
                                current_month=month_filter,
+                               day_limit=day_limit,
                                target_user_id=target_user_id)
     
     return render_template('history.html', 
@@ -409,6 +447,7 @@ def history():
                            total_minutes=total_minutes,
                            page=page,
                            per_page=per_page,
+                           day_limit=day_limit,
                            total_pages=pagination.pages,
                            target_username=target_username if target_user_id != current_user.id else None,
                            target_user_id=target_user_id,

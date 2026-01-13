@@ -51,12 +51,17 @@
                     <option value="{{ m }}" {% if current_month==m %}selected{% endif %}>{{ m }}</option>
                     {% endfor %}
                 </select>
+                <input type="number" name="day_limit" placeholder="Up to Day (e.g. 15)" min="1" max="31"
+                    value="{{ day_limit if day_limit else '' }}"
+                    style="padding: 0.5rem; width: 150px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary);">
+                <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">Filter</button>
             </form>
         </div>
 
         <div class="stats-grid" style="margin-bottom: 2rem; grid-template-columns: 1fr;">
             <div class="card stat-card" style="text-align: center; border-color: var(--accent-color);">
-                <h2>Total Idle Time ({% if current_month %}{{ current_month }}{% else %}All Time{% endif %})</h2>
+                <h2>Total Idle Time ({% if current_month %}{{ current_month }}{% if day_limit %}-01 to {{ current_month
+                    }}-{{ day_limit }}{% endif %}{% else %}All Time{% endif %})</h2>
                 <div class="value">{{ total_minutes | format_minutes }}</div>
                 <div class="sub-value" style="font-size: 1.1rem; color: var(--text-secondary); margin-top: 5px;">{{
                     total_minutes }} mins</div>
