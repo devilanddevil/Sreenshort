@@ -15,7 +15,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-# Initialize Flask App
+# Initialize Flask App 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_flash_messages'
 
