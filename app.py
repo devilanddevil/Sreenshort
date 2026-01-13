@@ -530,9 +530,31 @@ def export_excel():
 def delete_record(record_id):
     record = Record.query.get_or_404(record_id)
     if record.user_id != current_user.id: abort(403)
+    
+    # Cloudinary Deletion Algorithm
+    if record.filename.startswith('http'):
+        try:
+             # URL format: .../upload/v12345/public_id.ext
+             # We want 'public_id'
+             file_name_with_ext = record.filename.split('/')[-1]
+             public_id = file_name_with_ext.split('.')[0]
+             
+             cloudinary.uploader.destroy(public_id, invalidate=True)
+             print(f"Deleted from Cloudinary: {public_id}")
+        except Exception as e:
+            print(f"Error deleting from Cloudinary: {e}")
+
+    # Legacy Local Deletion
+    else:
+        try:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], record.filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except: pass
+
     db.session.delete(record)
     db.session.commit()
-    flash('Record deleted.', 'info')
+    flash('Record (and image) deleted.', 'info')
     return redirect(url_for('index'))
 
 with app.app_context():
