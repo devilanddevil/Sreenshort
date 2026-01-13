@@ -48,7 +48,7 @@ class User(UserMixin, db.Model):
 class Record(db.Model):
     __tablename__ = 'records'
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.now)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     filename = db.Column(db.String(300))
     idle_minutes = db.Column(db.Integer)
     original_text = db.Column(db.Text)
@@ -281,7 +281,7 @@ def upload_file():
                     original_text="Manual Entry",
                     reason=reason,
                     user_id=current_user.id,
-                    timestamp=datetime.datetime.now()
+                    timestamp=datetime.datetime.utcnow()
                 )
                 db.session.add(record)
                 db.session.commit()
@@ -357,7 +357,7 @@ def upload_file():
                     original_text=detected_text,
                     reason=reason,
                     user_id=current_user.id,
-                    timestamp=datetime.datetime.now()
+                    timestamp=datetime.datetime.utcnow()
                 )
                 db.session.add(record)
                 db.session.commit()
