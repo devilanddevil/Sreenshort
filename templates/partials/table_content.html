@@ -30,7 +30,7 @@
                     {% endif %}
                     {% endif %}
                 </td>
-                <td>{{ row.timestamp }}</td>
+                <td>{{ row.timestamp | to_local_time }}</td>
                 <td><span class="badge">{{ row.idle_minutes | format_minutes }}</span></td>
                 <td>{{ row.reason if row.reason else '-' }}</td>
                 <td class="text-muted">{{ row.original_text }}</td>

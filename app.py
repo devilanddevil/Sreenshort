@@ -13,7 +13,10 @@ from sqlalchemy import func
 import uuid
 import cloudinary
 import cloudinary.uploader
+import cloudinary.uploader
 import cloudinary.api
+import pytz
+from datetime import datetime as dt
 
 # Initialize Flask App 
 app = Flask(__name__)
@@ -112,22 +115,51 @@ def parse_idle_time(text):
             return total_minutes, time_str.strip()
     return 0, "No time detected"
 
+# --- TIMEZONE --
+IST = pytz.timezone('Asia/Kolkata')
+UTC = pytz.timezone('UTC')
+
+def utc_to_ist(utc_dt):
+    """Converts a naive UTC datetime to IST aware datetime, then to naive string if needed."""
+    if utc_dt is None: return ""
+    # Assume naive datetime is UTC
+    if utc_dt.tzinfo is None:
+        utc_dt = UTC.localize(utc_dt)
+    return utc_dt.astimezone(IST)
+
+def to_local_time(value, format='%Y-%m-%d %H:%M:%S'):
+    if value is None: return ""
+    local_dt = utc_to_ist(value)
+    return local_dt.strftime(format)
+
+app.jinja_env.filters['to_local_time'] = to_local_time
+
 def get_stats(page=1, per_page=5, user_id=None):
     if not user_id:
         return {'today': 0, 'month': 0, 'recent': {'records': [], 'page': 1, 'per_page': 5, 'total_pages': 0, 'total_count': 0}}
     
-    now = datetime.datetime.now()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    today_start_utc = None
+    month_start_utc = None
+    
+    # Calculate intervals based on IST
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    now_ist = now_utc.astimezone(IST)
+    
+    today_start_ist = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start_ist = now_ist.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Convert back to UTC for DB query
+    today_start_utc = today_start_ist.astimezone(UTC).replace(tzinfo=None)
+    month_start_utc = month_start_ist.astimezone(UTC).replace(tzinfo=None)
     
     today_minutes = db.session.query(func.sum(Record.idle_minutes)).filter(
         Record.user_id == user_id, 
-        Record.timestamp >= today_start
+        Record.timestamp >= today_start_utc
     ).scalar() or 0
     
     month_minutes = db.session.query(func.sum(Record.idle_minutes)).filter(
         Record.user_id == user_id, 
-        Record.timestamp >= month_start
+        Record.timestamp >= month_start_utc
     ).scalar() or 0
     
     pagination = Record.query.filter_by(user_id=user_id).order_by(Record.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
@@ -364,18 +396,19 @@ def history():
     query = Record.query.filter_by(user_id=target_user_id)
     
     dates = db.session.query(Record.timestamp).filter_by(user_id=target_user_id).all()
-    available_months = sorted(list(set([d[0].strftime('%Y-%m') for d in dates])), reverse=True)
+    available_months = sorted(list(set([utc_to_ist(d[0]).strftime('%Y-%m') for d in dates])), reverse=True)
     
     if month_filter:
         try:
              y, m = map(int, month_filter.split('-'))
-             start_date = datetime.datetime(y, m, 1)
+             # Create IST start date
+             start_date_ist = IST.localize(datetime.datetime(y, m, 1))
              
              # Month End Date (Default)
-             if m == 12: month_end_date = datetime.datetime(y + 1, 1, 1)
-             else: month_end_date = datetime.datetime(y, m + 1, 1)
+             if m == 12: month_end_date_ist = IST.localize(datetime.datetime(y + 1, 1, 1))
+             else: month_end_date_ist = IST.localize(datetime.datetime(y, m + 1, 1))
              
-             end_date = month_end_date
+             end_date_ist = month_end_date_ist
 
              # Apply Day Limit if provided
              day_limit = request.args.get('day_limit', type=int)
@@ -383,14 +416,18 @@ def history():
                  try:
                      # Calculate specific limit date (inclusive)
                      # We create a date for the specific day, then add 1 day to get the < bound
-                     limit_date = datetime.datetime(y, m, day_limit) + datetime.timedelta(days=1)
+                     limit_date_ist = IST.localize(datetime.datetime(y, m, day_limit)) + datetime.timedelta(days=1)
                      
                      # Ensure we don't go beyond the month's actual end
-                     if limit_date < month_end_date:
-                         end_date = limit_date
+                     if limit_date_ist < month_end_date_ist:
+                         end_date_ist = limit_date_ist
                  except ValueError:
                      # Invalid day for this month (e.g. Feb 30), ignore day limit
                      pass
+
+             # Convert to UTC for Query
+             start_date = start_date_ist.astimezone(UTC).replace(tzinfo=None)
+             end_date = end_date_ist.astimezone(UTC).replace(tzinfo=None)
 
              query = query.filter(Record.timestamp >= start_date, Record.timestamp < end_date)
         except: pass
@@ -405,24 +442,28 @@ def history():
     if month_filter:
         try:
              y, m = map(int, month_filter.split('-'))
-             start_date = datetime.datetime(y, m, 1)
+             start_date_ist = IST.localize(datetime.datetime(y, m, 1))
              
              # Month End Date (Default)
-             if m == 12: month_end_date = datetime.datetime(y + 1, 1, 1)
-             else: month_end_date = datetime.datetime(y, m + 1, 1)
+             if m == 12: month_end_date_ist = IST.localize(datetime.datetime(y + 1, 1, 1))
+             else: month_end_date_ist = IST.localize(datetime.datetime(y, m + 1, 1))
              
-             end_date = month_end_date
+             end_date_ist = month_end_date_ist
 
              # Apply Day Limit if provided
              day_limit = request.args.get('day_limit', type=int)
              if day_limit:
                  try:
                      # Calculate specific limit date (inclusive)
-                     limit_date = datetime.datetime(y, m, day_limit) + datetime.timedelta(days=1)
-                     if limit_date < month_end_date:
-                         end_date = limit_date
+                     limit_date_ist = IST.localize(datetime.datetime(y, m, day_limit)) + datetime.timedelta(days=1)
+                     if limit_date_ist < month_end_date_ist:
+                         end_date_ist = limit_date_ist
                  except ValueError:
                      pass
+
+             # Convert to UTC for Query
+             start_date = start_date_ist.astimezone(UTC).replace(tzinfo=None)
+             end_date = end_date_ist.astimezone(UTC).replace(tzinfo=None)
 
              sum_query = sum_query.filter(Record.timestamp >= start_date, Record.timestamp < end_date)
         except: pass
@@ -547,7 +588,9 @@ def export_excel():
              # Legacy or fallback
              link = url_for('static', filename=f'uploads/{r.filename}', _external=True)
 
-        ws.append([r.id, r.timestamp, readable_time, r.reason, r.original_text])
+        # Convert timestamp to local for Excel
+        local_ts_str = to_local_time(r.timestamp)
+        ws.append([r.id, local_ts_str, readable_time, r.reason, r.original_text])
         
         cell = ws.cell(row=ws.max_row, column=6)
         cell.value = "View Screenshot"
