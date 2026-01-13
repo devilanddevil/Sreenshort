@@ -134,6 +134,34 @@ def to_local_time(value, format='%Y-%m-%d %H:%M:%S'):
 
 app.jinja_env.filters['to_local_time'] = to_local_time
 
+app.jinja_env.filters['to_local_time'] = to_local_time
+
+def get_utc_timestamp_for_record(custom_date_str=None):
+    """
+    Returns a UTC datetime for the record.
+    If custom_date_str is provided (YYYY-MM-DD), it assumes the user meant that date in IST,
+    keeping the CURRENT time of day.
+    """
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    
+    if not custom_date_str:
+        return now_utc.replace(tzinfo=None) # Return naive UTC
+        
+    try:
+        # User Provided Date (e.g., 2026-01-10)
+        target_date = datetime.datetime.strptime(custom_date_str, '%Y-%m-%d').date()
+        
+        # Current time in IST
+        now_ist = now_utc.astimezone(IST)
+        
+        # Combine Target Date + Current IST Time
+        target_ist_dt = IST.localize(datetime.datetime.combine(target_date, now_ist.time()))
+        
+        # Convert back to UTC
+        return target_ist_dt.astimezone(UTC).replace(tzinfo=None)
+    except ValueError:
+        return now_utc.replace(tzinfo=None)
+
 def get_stats(page=1, per_page=5, user_id=None):
     if not user_id:
         return {'today': 0, 'month': 0, 'recent': {'records': [], 'page': 1, 'per_page': 5, 'total_pages': 0, 'total_count': 0}}
@@ -267,9 +295,13 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 @login_required
+@login_required
 def upload_file():
     manual_minutes = request.form.get('manual_minutes')
     reason = request.form.get('reason', '')
+    custom_date = request.form.get('custom_date')
+    
+    timestamp = get_utc_timestamp_for_record(custom_date)
     
     if manual_minutes:
         try:
@@ -281,7 +313,7 @@ def upload_file():
                     original_text="Manual Entry",
                     reason=reason,
                     user_id=current_user.id,
-                    timestamp=datetime.datetime.utcnow()
+                    timestamp=timestamp
                 )
                 db.session.add(record)
                 db.session.commit()
@@ -305,9 +337,12 @@ def upload_file():
     if file:
         original_filename = secure_filename(file.filename)
         # Generate unique filename to prevent overwriting
-        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        original_filename = secure_filename(file.filename)
+        # Generate unique filename to prevent overwriting
+        # Use simple now() for filename, timestamp logic handles DB
+        ts_str = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
-        filename = f"{timestamp}_{unique_id}_{original_filename}"
+        filename = f"{ts_str}_{unique_id}_{original_filename}"
         
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
@@ -357,7 +392,7 @@ def upload_file():
                     original_text=detected_text,
                     reason=reason,
                     user_id=current_user.id,
-                    timestamp=datetime.datetime.utcnow()
+                    timestamp=timestamp
                 )
                 db.session.add(record)
                 db.session.commit()
