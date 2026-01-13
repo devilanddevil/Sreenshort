@@ -18,10 +18,16 @@
                     {% if row.filename == 'manual_entry' %}
                     <span class="badge" style="background: #e9ecef; color: #495057;">📝 Manual</span>
                     {% else %}
+                    {% if row.filename.startswith('http') %}
+                    <a href="{{ row.filename }}" target="_blank">
+                        <img src="{{ row.filename }}" alt="Screenshot" class="thumbnail">
+                    </a>
+                    {% else %}
                     <a href="{{ url_for('static', filename='uploads/' + row.filename) }}" target="_blank">
                         <img src="{{ url_for('static', filename='uploads/' + row.filename) }}" alt="Screenshot"
                             class="thumbnail">
                     </a>
+                    {% endif %}
                     {% endif %}
                 </td>
                 <td>{{ row.timestamp }}</td>

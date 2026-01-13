@@ -35,6 +35,10 @@ You must tell the app where the database is.
 4.  Add the Secret Key:
     *   **Key**: `SECRET_KEY`
     *   **Value**: `any_long_random_string`
+5.  **Add Cloudinary Config**:
+    *   **Key**: `CLOUD_NAME`, **Value**: `dcrrqwksv`
+    *   **Key**: `API_KEY`, **Value**: `547283279769849`
+    *   **Key**: `API_SECRET`, **Value**: `eu1-rAlNpc77R_cAOkBVt4V3qd4`
 
 ## 5. Deploy
 1.  Click **Create Web Service** (or **Save Changes** if updating).

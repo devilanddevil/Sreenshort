@@ -11,6 +11,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 import uuid
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -66,11 +69,20 @@ for path in tesseract_paths:
         tesseract_cmd = path
         break
 
+
 if tesseract_cmd:
     pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
     print(f"Using Tesseract at: {tesseract_cmd}")
 else:
     print("Tesseract not found in common paths. Relying on system PATH.")
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name = os.environ.get('CLOUD_NAME'),
+    api_key = os.environ.get('API_KEY'),
+    api_secret = os.environ.get('API_SECRET'),
+    secure = True
+)
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -276,11 +288,13 @@ def upload_file():
             image_stream = io.BytesIO(image_bytes)
             base_img = Image.open(image_stream)
             
-            # Ephemeral save for display
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                os.makedirs(app.config['UPLOAD_FOLDER'])
-            with open(filepath, 'wb') as f:
-                f.write(image_bytes)
+            # Upload to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                io.BytesIO(image_bytes), 
+                public_id=filename.split('.')[0],
+                resource_type="image"
+            )
+            file_url_or_id = upload_result.get('secure_url')
             
             img_gray = base_img.convert('L')
             text = pytesseract.image_to_string(img_gray)
@@ -306,7 +320,7 @@ def upload_file():
 
             if minutes > 0:
                 record = Record(
-                    filename=filename,
+                    filename=file_url_or_id,
                     idle_minutes=minutes,
                     original_text=detected_text,
                     reason=reason,
@@ -487,12 +501,18 @@ def export_excel():
         
     for r in records:
         readable_time = format_minutes(r.idle_minutes)
-        abs_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], r.filename))
+        # Check if filename is a URL or a local path (legacy support)
+        if r.filename.startswith('http'):
+            link = r.filename
+        else:
+             # Legacy or fallback
+             link = url_for('static', filename=f'uploads/{r.filename}', _external=True)
+
         ws.append([r.id, r.timestamp, readable_time, r.reason, r.original_text])
         
         cell = ws.cell(row=ws.max_row, column=6)
         cell.value = "View Screenshot"
-        cell.hyperlink = abs_path
+        cell.hyperlink = link
         cell.style = "Hyperlink"
     
     ws.column_dimensions['B'].width = 20
