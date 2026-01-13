@@ -11,7 +11,7 @@
 
 <body>
     <div class="container" style="max-width: 1000px;">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <header class="header-flex">
             <div>
                 <h1>Activity History</h1>
                 {% if target_username %}
@@ -23,10 +23,10 @@
                 <p class="subtitle">Full log of all tracked idle sessions.</p>
                 {% endif %}
             </div>
-            <div style="text-align: right;">
+            <div class="header-user-info">
                 <span style="display: block; color: var(--text-secondary); margin-bottom: 0.5rem;">Welcome, <strong>{{
                         current_user.username }}</strong></span>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <div class="header-actions">
                     {% if current_user.is_admin %}
                     <a href="{{ url_for('admin') }}"
                         style="color: var(--accent-color); text-decoration: none; font-weight: 500;">Admin Panel</a>
@@ -37,7 +37,7 @@
             </div>
         </header>
 
-        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div class="history-controls">
             <a href="{{ url_for('index') }}" class="btn-secondary">← Back to Dashboard</a>
 
             <form action="{{ url_for('history') }}" method="get" class="filter-form">
@@ -64,9 +64,8 @@
         </div>
 
         <div class="card history-card">
-            <div class="card-header"
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="card-header card-header-flex">
+                <div class="card-header-title-group">
                     <h2 style="margin: 0;">
                         {% if current_month %}Records for {{ current_month }}{% else %}All Records{% endif %}
                     </h2>
@@ -90,8 +89,10 @@
                         </select>
                     </form>
                 </div>
-                <a href="{{ url_for('export_excel') }}" class="btn-primary"
-                    style="text-decoration: none; font-size: 0.9rem; padding: 0.5rem 1rem;">Download Excel 📊</a>
+                <div class="card-header-actions">
+                    <a href="{{ url_for('export_excel') }}" class="btn-primary"
+                        style="text-decoration: none; font-size: 0.9rem; padding: 0.5rem 1rem;">Download Excel 📊</a>
+                </div>
             </div>
             <!-- AJAX Container -->
             <div id="data-container">

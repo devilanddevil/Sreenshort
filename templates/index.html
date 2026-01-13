@@ -11,15 +11,15 @@
 
 <body>
     <div class="container">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <header class="header-flex">
             <div>
                 <h1>Idle Time Tracker</h1>
                 <p class="subtitle">Upload screenshots to track your idle minutes automatically.</p>
             </div>
-            <div style="text-align: right;">
+            <div class="header-user-info">
                 <span style="display: block; color: var(--text-secondary); margin-bottom: 0.5rem;">Welcome, <strong>{{
                         current_user.username }}</strong></span>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <div class="header-actions">
                     {% if current_user.is_admin %}
                     <a href="{{ url_for('admin') }}"
                         style="color: var(--accent-color); text-decoration: none; font-weight: 500;">Admin Panel</a>
@@ -65,7 +65,7 @@
                     <span>Choose a file, drag it here, or <strong>paste (Ctrl+V)</strong></span>
                 </label>
 
-                <div class="form-group" style="width: 100%; margin-top: 1rem; display: flex; gap: 10px;">
+                <div class="form-group upload-form-group">
                     <input type="number" name="manual_minutes" id="manual_minutes"
                         placeholder="Manual Minutes (optional)" class="input-reason" min="1"
                         style="flex: 1; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-color); color: var(--text-primary);">
@@ -83,12 +83,11 @@
         </div>
         <!-- Recent Activity Table -->
         <div class="card">
-            <div class="card-header"
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="card-header card-header-flex">
+                <div class="card-header-title-group">
                     <h2 style="margin: 0;">Recent Activity</h2>
                 </div>
-                <div style="display: flex; gap: 1rem;">
+                <div class="card-header-actions">
                     <a href="{{ url_for('history') }}"
                         style="text-decoration: none; color: var(--accent-color); font-weight: 500;">View Full History
                         →</a>

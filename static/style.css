@@ -238,6 +238,7 @@ input[type="file"] {
 .table-wrapper {
     max-height: 400px;
     overflow-y: auto;
+    overflow-x: auto; /* Allow horizontal scroll on mobile */
     border: 1px solid var(--border-color);
     border-radius: 6px;
 }
@@ -249,4 +250,136 @@ input[type="file"] {
     z-index: 1;
     box-shadow: 0 2px 0 var(--border-color);
     /* Visual border for sticky header */
+}
+
+/* New Utility Classes for Responsiveness */
+.header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-user-info {
+    text-align: right;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.upload-form-group {
+    width: 100%;
+    margin-top: 1rem;
+    display: flex;
+    gap: 10px;
+}
+
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.card-header-title-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.card-header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.history-controls {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 1rem;
+    }
+    
+    .container {
+        padding: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Header */
+    .header-flex {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+
+    .header-user-info {
+        width: 100%;
+        text-align: center;
+    }
+
+    .header-actions {
+        justify-content: center;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Upload Form */
+    .upload-form-group {
+        flex-direction: column;
+    }
+    
+    .input-reason {
+         width: 100% !important;
+         flex: none !important;
+    }
+
+    /* Card Headers */
+    .card-header-flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .card-header-flex > div {
+        width: 100%;
+    }
+    
+    .card-header-title-group {
+        flex-wrap: wrap;
+    }
+    
+    .card-header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .history-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .history-controls .btn-secondary {
+        text-align: center;
+    }
+
+    .filter-form select {
+        width: 100%;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
 }
